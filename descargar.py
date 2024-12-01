@@ -3,14 +3,13 @@ import requests
 import streamlit as st
 
 # Configuración
-API_KEY = st.secrets["API_KEY"]  # Lee el API key desde los secretos de Streamlit
 BASE_URL = "https://api.elevenlabs.io/v1"
-DOWNLOAD_FOLDER = "downloads"  # Carpeta para guardar los audios
+DOWNLOAD_FOLDER = "downloads"
 
 # Crear la carpeta de descargas si no existe
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-def get_history_items():
+def get_history_items(api_key):
     """Obtiene todos los ítems del historial."""
     items = []
     next_id = None
@@ -22,7 +21,7 @@ def get_history_items():
 
         response = requests.get(
             f"{BASE_URL}/history",
-            headers={"xi-api-key": API_KEY},
+            headers={"xi-api-key": api_key},
             params=params
         )
 
@@ -40,12 +39,12 @@ def get_history_items():
     
     return items
 
-def download_audio(history_item_id, filename):
+def download_audio(api_key, history_item_id, filename):
     """Descarga un archivo de audio dado su ID."""
     url = f"{BASE_URL}/history/{history_item_id}/audio"
     response = requests.get(
         url,
-        headers={"xi-api-key": API_KEY},
+        headers={"xi-api-key": api_key},
         stream=True
     )
 
@@ -63,21 +62,27 @@ def main():
     st.title("Descarga de Audios - ElevenLabs")
     st.write("Descarga automáticamente todos los audios generados usando la API de ElevenLabs.")
 
-    if st.button("Iniciar Descarga"):
-        with st.spinner("Obteniendo historial de audios..."):
-            history_items = get_history_items()
+    # Campo para ingresar el API Key
+    api_key = st.text_input("Introduce tu API Key de ElevenLabs:", type="password")
 
-        if history_items:
-            st.success(f"Se encontraron {len(history_items)} audios.")
-            for item in history_items:
-                history_item_id = item["history_item_id"]
-                filename = f"{item['date_unix']}_{history_item_id}.mp3"
-                filepath = download_audio(history_item_id, filename)
-                if filepath:
-                    st.write(f"Descargado: {filename}")
-            st.success("¡Descarga completa!")
+    if st.button("Iniciar Descarga"):
+        if not api_key:
+            st.error("Por favor, introduce tu API Key antes de continuar.")
         else:
-            st.warning("No se encontraron audios en el historial.")
+            with st.spinner("Obteniendo historial de audios..."):
+                history_items = get_history_items(api_key)
+
+            if history_items:
+                st.success(f"Se encontraron {len(history_items)} audios.")
+                for item in history_items:
+                    history_item_id = item["history_item_id"]
+                    filename = f"{item['date_unix']}_{history_item_id}.mp3"
+                    filepath = download_audio(api_key, history_item_id, filename)
+                    if filepath:
+                        st.write(f"Descargado: {filename}")
+                st.success("¡Descarga completa!")
+            else:
+                st.warning("No se encontraron audios en el historial.")
 
 if __name__ == "__main__":
     main()
