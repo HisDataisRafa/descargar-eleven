@@ -74,12 +74,31 @@ def main():
 
             if history_items:
                 st.success(f"Se encontraron {len(history_items)} audios.")
+                files_downloaded = []
                 for item in history_items:
                     history_item_id = item["history_item_id"]
                     filename = f"{item['date_unix']}_{history_item_id}.mp3"
                     filepath = download_audio(api_key, history_item_id, filename)
                     if filepath:
+                        files_downloaded.append(filepath)
                         st.write(f"Descargado: {filename}")
+                
+                if files_downloaded:
+                    # Crear un archivo ZIP para descargar
+                    import zipfile
+                    zip_path = "audios_descargados.zip"
+                    with zipfile.ZipFile(zip_path, "w") as zipf:
+                        for file in files_downloaded:
+                            zipf.write(file, os.path.basename(file))
+                    
+                    # Agregar enlace de descarga
+                    with open(zip_path, "rb") as f:
+                        st.download_button(
+                            label="Descargar todos los audios como ZIP",
+                            data=f,
+                            file_name="audios_descargados.zip",
+                            mime="application/zip",
+                        )
                 st.success("¡Descarga completa!")
             else:
                 st.warning("No se encontraron audios en el historial.")
