@@ -1,2 +1,4 @@
 streamlit
 requests
+[API_KEY]
+API_KEY = "sk_0b2d2714838a11dfa39961c50c00839badbcb6a64abf44cd"
