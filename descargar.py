@@ -1,13 +1,11 @@
 import os
 import requests
 import streamlit as st
+from io import BytesIO
+from zipfile import ZipFile
 
 # Configuración
 BASE_URL = "https://api.elevenlabs.io/v1"
-DOWNLOAD_FOLDER = "downloads"
-
-# Crear la carpeta de descargas si no existe
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 def get_history_items(api_key):
     """Obtiene todos los ítems del historial."""
@@ -39,8 +37,8 @@ def get_history_items(api_key):
     
     return items
 
-def download_audio(api_key, history_item_id, filename):
-    """Descarga un archivo de audio dado su ID."""
+def download_audio(api_key, history_item_id):
+    """Descarga un archivo de audio dado su ID y lo devuelve como BytesIO."""
     url = f"{BASE_URL}/history/{history_item_id}/audio"
     response = requests.get(
         url,
@@ -49,13 +47,10 @@ def download_audio(api_key, history_item_id, filename):
     )
 
     if response.status_code == 200:
-        filepath = os.path.join(DOWNLOAD_FOLDER, filename)
-        with open(filepath, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        return filepath
+        audio = BytesIO(response.content)
+        return audio
     else:
-        st.error(f"Error al descargar {filename}: {response.text}")
+        st.error(f"Error al descargar audio con ID {history_item_id}: {response.text}")
         return None
 
 def main():
@@ -78,27 +73,26 @@ def main():
                 for item in history_items:
                     history_item_id = item["history_item_id"]
                     filename = f"{item['date_unix']}_{history_item_id}.mp3"
-                    filepath = download_audio(api_key, history_item_id, filename)
-                    if filepath:
-                        files_downloaded.append(filepath)
-                        st.write(f"Descargado: {filename}")
-                
+                    audio = download_audio(api_key, history_item_id)
+                    if audio:
+                        files_downloaded.append((filename, audio))
+
+                # Crear archivo ZIP con todos los audios
                 if files_downloaded:
-                    # Crear un archivo ZIP para descargar
-                    import zipfile
-                    zip_path = "audios_descargados.zip"
-                    with zipfile.ZipFile(zip_path, "w") as zipf:
-                        for file in files_downloaded:
-                            zipf.write(file, os.path.basename(file))
+                    zip_buffer = BytesIO()
+                    with ZipFile(zip_buffer, "w") as zipf:
+                        for filename, audio in files_downloaded:
+                            zipf.writestr(filename, audio.getvalue())
                     
-                    # Agregar enlace de descarga
-                    with open(zip_path, "rb") as f:
-                        st.download_button(
-                            label="Descargar todos los audios como ZIP",
-                            data=f,
-                            file_name="audios_descargados.zip",
-                            mime="application/zip",
-                        )
+                    zip_buffer.seek(0)
+
+                    # Agregar botón para descargar el ZIP
+                    st.download_button(
+                        label="Descargar todos los audios como ZIP",
+                        data=zip_buffer,
+                        file_name="audios_descargados.zip",
+                        mime="application/zip",
+                    )
                 st.success("¡Descarga completa!")
             else:
                 st.warning("No se encontraron audios en el historial.")
