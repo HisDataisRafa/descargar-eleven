@@ -3,7 +3,7 @@ import requests
 import streamlit as st
 
 # Configuración
-API_KEY = st.secrets["sk_0b2d2714838a11dfa39961c50c00839badbcb6a64abf44cd"]  # Lee el API key desde los secretos de Streamlit
+API_KEY = st.secrets["API_KEY"]  # Lee el API key desde los secretos de Streamlit
 BASE_URL = "https://api.elevenlabs.io/v1"
 DOWNLOAD_FOLDER = "downloads"  # Carpeta para guardar los audios
 
